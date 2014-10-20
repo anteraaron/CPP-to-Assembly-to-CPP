@@ -9,8 +9,10 @@ public class CPPtoASM {
 		int stringCounter = 0;
 		boolean newline = false;
 		Scanner input = new Scanner(System.in);
+		
 		System.out.println("Enter the filename of C++ file: ");
 		filename = input.nextLine();
+		
 		try {
 			String flnm = filename.replaceAll(".cpp", ".asm");
 			FileWriter fileWriter = null;
@@ -24,9 +26,11 @@ public class CPPtoASM {
 			
 			while(reader.hasNextLine()) {
 				String line = reader.nextLine();
+				
 				line = line.replaceAll("\t", "");
 				line = line.replaceAll("\n", "");
 				line = line.replaceAll("\";", " \";");
+				
 				StringTokenizer st = new StringTokenizer(line, " ");
 				
 				while(st.hasMoreTokens()) {
@@ -49,11 +53,13 @@ public class CPPtoASM {
 								}
 							}
 						}
+						
 						stringCounter++;
+						
 						if(!newline) {
-							fileWriter.write("str" + stringCounter + " db " + ASMstring + "\",'$'\n");
+							fileWriter.write("\tstr" + stringCounter + " db " + ASMstring + "\",'$'\n");
 						} else {
-							fileWriter.write("str" + stringCounter + " db " + ASMstring + ",0ah,'$'\n");
+							fileWriter.write("\tstr" + stringCounter + " db " + ASMstring + ",0ah,'$'\n");
 						}
 						
 						ASMstring = "";
@@ -61,27 +67,34 @@ public class CPPtoASM {
 				}  
 				
 			}
+			
 	        fileWriter.write(".stack 100h\n");
 	        fileWriter.write(".code\n");
-	        fileWriter.write("main proc\n\n");
-	        fileWriter.write("mov ax, @data\n");
-	        fileWriter.write("mov ds, ax\n\n");
+	        fileWriter.write("\tmain proc\n\n");
+	        fileWriter.write("\tmov ax, @data\n");
+	        fileWriter.write("\tmov ds, ax\n\n");
 	        
 	        for(int i = 1; i <= stringCounter; i++) {
-	        	fileWriter.write("lea dx, str" + i + "\n");
-				fileWriter.write("mov ah, 09h\n");
-				fileWriter.write("int 21h\n\n");
+	        	fileWriter.write("\tlea dx, str" + i + "\n");
+				fileWriter.write("\tmov ah, 09h\n");
+				fileWriter.write("\tint 21h\n\n");
 	        }
 	        
-			fileWriter.write("mov ax, 4c00h\n");
-			fileWriter.write("int 21h\n\n");
-			fileWriter.write("main endp\n");
-		    fileWriter.write("end main\n");
+			fileWriter.write("\tmov ax, 4c00h\n");
+			fileWriter.write("\tint 21h\n\n");
+			fileWriter.write("\tmain endp\n");
+		    fileWriter.write("\tend main\n");
 			reader.close();
 			fileWriter.close();
 		}
-		catch(Exception e) {
-			System.out.println("Error occured.");
+		catch(FileNotFoundException fnfe) {
+			System.err.println("File not found!");
+		}
+		catch(EOFException eofe) {
+			System.exit(0);
+		}
+		catch(IOException ioe) {
+			System.err.println("I/O error");
 		}
 		System.out.println("DONE!");
 	}

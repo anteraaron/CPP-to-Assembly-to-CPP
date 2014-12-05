@@ -1,3 +1,5 @@
+package AssemblerDisassembler;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,20 +11,19 @@ import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.StringTokenizer;
 
-public class Dissasembler{
-  
-  //arraylist para sa declared variables
-  private ArrayList<String> variables = new ArrayList<String>();
-  //arraylist for .code part
+
+
+public class Disassembler {
+	
+	private ArrayList<String> variables = new ArrayList<String>();
+	private ArrayList<String> stringVariables = new ArrayList<String>();
 	private ArrayList<String> code = new ArrayList<String>();
-	//arraylist for .data part
 	private ArrayList<String> data = new ArrayList<String>();
 	private String blank = "";
-
-
-  public void convertCPPtoASM() throws FileNotFoundException{
-  	
-  		String fileName = "test2.cpp";
+	
+	public void convertCPPtoASM(String filepath) throws FileNotFoundException{
+		
+		String fileName = filepath;
 		String line = "";
 		String lineWithNoSpaces = "";
 		String forLoop = "";
@@ -50,7 +51,7 @@ public class Dissasembler{
 		ArrayList<String> loop1End = new ArrayList<String>();
 		ArrayList<String> loop2End = new ArrayList<String>();
 		
-		System.out.print("Filename of C++ file:");
+		//System.out.print("Filename of C++ file:");
 		//fileName = input.nextLine();
 		
 		Scanner fileReader = new Scanner(new FileInputStream(fileName));
@@ -65,7 +66,7 @@ public class Dissasembler{
 			forLoop = line;
 			
 			line = line.replaceAll(";", "");
-			System.out.println(line);
+			//System.out.println(line);
 			
 			if(line.contains("}")){
 				line = line.trim();
@@ -535,10 +536,10 @@ public class Dissasembler{
 				code.add(toCode + "do-whileLoop" + loopNumber + ":");
 				//System.out.println(loopNumber);
 			}
-			else if(line.contains("if") && !line.contains("else")){
+			else if(line.contains("if(") && !line.contains("else")){
 				indentation++;
 				ifCnt++;
-				
+				System.out.println("hello");
 				String toManipulate = "";
 				
 				toCode = "";
@@ -548,15 +549,15 @@ public class Dissasembler{
 				
 				toManipulate = line.substring(line.indexOf('(') + 1, line.indexOf(')'));
 				
-				System.out.println(toManipulate);
+				//System.out.println(toManipulate);
 				
 				if(toManipulate.contains(">")){
 					StringTokenizer st = new StringTokenizer(toManipulate, ">");
 					String variabletocompare = st.nextToken().trim();
 					String valuetocompare = st.nextToken().trim();
 					
-					System.out.println(variabletocompare);
-					System.out.println(valuetocompare);
+					//System.out.println(variabletocompare);
+					//System.out.println(valuetocompare);
 					
 					code.add(toCode + "cmp " + variabletocompare + ", " + valuetocompare + "\n" + toCode + "jg if" + ifCnt + ":");
 					
@@ -564,7 +565,7 @@ public class Dissasembler{
 				//StringTokenizer st = new StringTokenizer();
 				
 			}
-			else if(line.contains("if") && line.contains("else")){
+			else if(line.contains("if(") && line.contains("else")){
 				//indentation++;
 				elseCnt++;
 				
@@ -692,33 +693,72 @@ public class Dissasembler{
 					
 			}
 			else if(line.contains("char ")){
-				StringTokenizer st = new StringTokenizer(line.substring(5, line.length()), "=");
 				
-				int tokenCount = 0;
-				
-				String token = st.nextToken();
-				
-				token = token.trim();
-				
-				variables.add(token);
-				
-				String varDeclaration = token + " db ";
-				
-				tokenCount++;
-				
-				while(st.hasMoreTokens()){
-					token = st.nextToken();
+				if(line.contains("=")){
+					StringTokenizer st = new StringTokenizer(line.substring(5, line.length()), "=");
+					
+					int tokenCount = 0;
+					
+					String token = st.nextToken();
+					
 					token = token.trim();
 					
-					if(tokenCount == 1){
-						token = token.trim();
-						varDeclaration += token + ", '$'";
-						}
+					variables.add(token);
 					
+					String varDeclaration = token + " db ";
+					
+					tokenCount++;
+					
+					while(st.hasMoreTokens()){
+						token = st.nextToken();
+						token = token.trim();
+						
+						if(tokenCount == 1){
+							token = token.trim();
+							varDeclaration += token + ", '$'";
+							}
+						
+					}
+					
+					data.add(varDeclaration);
+				}
+				else{
+					line = line.trim();
+					line = line.substring(5, line.length());
+					variables.add(line);
+					data.add(line + " db (?)");
 				}
 				
-				data.add(varDeclaration);
-			}						
+			}
+			else if(line.contains("string")){
+				if(line.contains("=")){
+					//messageCounter++;
+					line = line.trim();
+					
+					line = line.substring(line.indexOf(" "), line.length());
+					
+					StringTokenizer st = new StringTokenizer(line, "=");
+					
+					String newMessage = st.nextToken().trim();
+					stringVariables.add(newMessage);
+					String messageContent = st.nextToken();
+					messageContent = messageContent.substring(messageContent.indexOf('"') + 1, messageContent.lastIndexOf('"'));
+					
+					variables.add(newMessage);
+					
+					data.add(newMessage + " db '" + messageContent + "', '$'");
+					
+					//System.out.println(newMessage);
+					//System.out.println(messageContent);
+										
+				}
+				else{
+					line = line.trim();
+					line = line.substring(line.indexOf(' '), line.length());
+					//System.out.println(line);
+				}
+				
+			}
 			else if(line.equals("}")){
 				
 				if(insideLoop1 && !insideLoop2){
@@ -749,18 +789,18 @@ public class Dissasembler{
 					toCode += "  ";
 				}
 				
-				System.out.println(toCode + "lelz");
+		
 				
 				StringTokenizer st = new StringTokenizer(line, "+=");
 				
 				String variableUsed = st.nextToken().trim();
 				
-				System.out.println(variableUsed);
+		
 				
 				String newValue = st.nextToken().trim();
 				newValue.replaceAll(" ", "");
 				
-				System.out.println(newValue);	
+				
 				
 				if(newValue.contains("+") || newValue.contains("-") || newValue.contains("%") || newValue.contains("*") || newValue.contains("/")){
 					
@@ -823,18 +863,18 @@ public class Dissasembler{
 				}
 						
 				
-				System.out.println(toCode + "lelz");
+				//System.out.println(toCode + "lelz");
 				
 				StringTokenizer st = new StringTokenizer(line, "=");
 				
 				String variableUsed = st.nextToken().trim();
 				
-				System.out.println(variableUsed);
+				//System.out.println(variableUsed);
 				
 				String newValue = st.nextToken().trim();
 				newValue.replaceAll(" ", "");
 				
-				System.out.println(newValue);	
+				//System.out.println(newValue);	
 				
 				if(newValue.contains("+") || newValue.contains("-") || newValue.contains("%") || newValue.contains("*") || newValue.contains("/")){
 					
@@ -874,6 +914,9 @@ public class Dissasembler{
 						}
 					}
 				}
+				else if(stringVariables.contains(newValue.trim())){
+					code.add(toCode + "mov " + variableUsed + ", offset " + newValue);
+				}
 				else{
 				code.add(toCode + "mov " + variableUsed + ", " + newValue);
 				}
@@ -883,16 +926,19 @@ public class Dissasembler{
 			
 		}
 		
-		System.out.println("------------------------------------CONVERTED ASSEMBLY CODE------------------------------------");
+		//System.out.println("------------------------------------CONVERTED ASSEMBLY CODE------------------------------------");
 		
 		String asmHeaders = ".model small \n\n.data \n\n";
 		String middlePart = "\n.stack 100h \n\n.code \n\nmain proc \n\nmov ax, @data \nmov ds, ax \n\n";
 		String endProgram = "mov ax, 4c00h \nint 21h \n\nmain endp \nend main\n";
 		
-		/*//File file2 = new File("testfile.asm");
+		 File file2 = new File(fileName);
+		 fileName = file2.getName();
+		 fileName = fileName.substring(0, fileName.length()-4);
+		 fileName += ".asm";
 		try {
 			//BufferedWriter output = new BufferedWriter(new FileOutputStream(file));
-			File file2 = new File("testfile.asm");
+			file2 = new File(fileName);
 			FileWriter fw = new FileWriter(file2.getAbsoluteFile());
 			BufferedWriter bw = new BufferedWriter(fw);
 			
@@ -914,34 +960,32 @@ public class Dissasembler{
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}*/
-		
-		
-		
-		System.out.println(asmHeaders);
-		for(String dataDeclarations : data){
-			System.out.println(dataDeclarations);
 		}
 		
-		System.out.println(middlePart);
-		System.out.println();
+		
+		
+	//	System.out.println(asmHeaders);
+		for(String dataDeclarations : data){
+		//	System.out.println(dataDeclarations);
+		}
+		
+	//	System.out.println(middlePart);
+		//System.out.println();
 		for(String codeBody : code){
 			//System.out.println(codeBody);
 			System.out.println(codeBody + "\n");
 		}
 		
-		System.out.println(endProgram);
+	//	System.out.println(endProgram);
 		
-		System.out.println(loop1End.toString());
-		System.out.println(loop2End.toString());
+		//System.out.println(loop1End.toString());
+		//System.out.println(loop2End.toString());
 		
 		if(insideLoop1 && insideLoop2){
-			System.out.println("OO");
+		//	System.out.println("OO");
 		}
 		//System.out.println(data.toString());
-		System.out.println(variables.toString());
+	//	System.out.println(variables.toString());
 	
 	}
-  	
-  }
-
+}

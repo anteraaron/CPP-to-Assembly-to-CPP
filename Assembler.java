@@ -51,7 +51,6 @@ public class Assembler {
 						temp = getSplittedContent()[j].split(",");
 
 						if(temp[0].contains("do")){
-							
 							getSplittedContent()[j] = "";
 							getSplittedContent()[i] = "do{";
 							
@@ -112,6 +111,7 @@ public class Assembler {
 				break;				
 			}
 		}
+		
 		//if there is a match, it means it is an if-else
 		if(!match){
 			appendNewContent(condition + ",{42733}->loop<-{42733}");
@@ -189,6 +189,7 @@ public class Assembler {
 				}
 				
 				if(!labelName.equals("")){
+	
 					//checks if it is else or if-else
 					for(int l = finalPosition + 1; l < getSplittedContent().length; l++){
 						if(getSplittedContent()[l].replaceAll("\\s+", "").contains(labelName + ":") && l!=k){
@@ -196,7 +197,8 @@ public class Assembler {
 							break;
 						}
 					}
-				}					
+				}	
+				
 			}
 
 			if(!match){
@@ -218,6 +220,7 @@ public class Assembler {
 					setSplittedContent(getContent());//sets the old content
 					appendNewContent("\n}");
 				}
+				
 				
 			}
 		
@@ -268,14 +271,14 @@ public class Assembler {
 				appendNewContent("while(true){\n"); //mimic the behavior of assembly loop
 				setCurrentLine(0);
 				translateMain();
-				
 				setCurrentLine(labelPosition); //return the previous position
 				appendNewContent("\n}");
 				setSplittedContent(getContent()); //sets the old content
+				System.out.println(getSplittedContent()[labelPosition]);
 			}
 					
 		}else if(getSplittedContent()[i].toLowerCase().contains("cmp")){ //if there is a condition, determine if a loop or if-else
-		
+			
 			labelName = "";
 			condition = "";
 			conditionValue = getSplittedContent()[i].replaceAll("\\s+", "").substring(3).split(","); //gets the two values being compared
@@ -346,6 +349,8 @@ public class Assembler {
 				
 			}
 		}
+		
+		
 	}
 	
 	/**
@@ -390,9 +395,7 @@ public class Assembler {
 					appendNewContent("std::cout << dx;\n");
 				}
 				
-			}/*else if(getSplittedContent()[i].replaceAll("\\s+",  "").equalsIgnoreCase("movah,09h")&&getSplittedContent()[i+1].replaceAll("\\s+",  "").equalsIgnoreCase("int21h")){
-				appendNewContent("cout << dx;\n");
-			}*/
+			}
 			
 			String temp = "";
 			String[] splittedOperands = null;
@@ -497,6 +500,9 @@ public class Assembler {
 				//continue until the end of .data segment
 				while(!((getSplittedContent()[i].replaceAll("\\s+", "")).equalsIgnoreCase(".model")||(getSplittedContent()[i].replaceAll("\\s+", "")).equalsIgnoreCase(".code")||(getSplittedContent()[i].replaceAll("\\s+", "")).contains(".stack"))){			
 					//remove db, dw, dd
+					while(getSplittedContent()[i].replaceAll("\\s+", "").equals("")){
+						i++;
+					}
 					String dataType, variableName, value, oldVarName = "";
 					
 					if(getSplittedContent()[i].toLowerCase().matches(".*\\bdb\\b.*")){
@@ -688,12 +694,8 @@ public class Assembler {
 		appendNewContent("char dh;");
 		appendNewContent("char si;");
 		translateVariables(); //converts assembly variables to C++
-		
-		
-		
 		translateMain(); //translate the body of the assembly to C++
 		changeWhileConditions();
-		
 		
 		
 	}
@@ -739,6 +741,7 @@ public class Assembler {
 			return 2;
 		} catch (Exception e){
 			System.out.println("Error");
+			e.printStackTrace();
 			return 3;
 		}
 

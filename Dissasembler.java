@@ -21,6 +21,17 @@ public class Dissasembler{
 
 
   public void convertCPPtoASM() throws FileNotFoundException{
-  
+  	
+  	String fileName = "test2.cpp";
+	String line = "";
+	String lineWithNoSpaces = "";
+	String forLoop = "";
+	String toCode = "";
+	
+	int stringCounter = 0;
+	int messageCounter = 1;
+	int variableCounter = 1;
+		
+  	
   }
 }

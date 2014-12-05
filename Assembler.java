@@ -23,6 +23,75 @@ public class Assembler {
 	}
 	
 	/**
+	 * Change the true condition of the while loops
+	 */
+	private void changeWhileConditions(){
+		//",{42733}->loop<-{42733}" is  the indicator of the loop condition
+		int occurence = 0; //tells whether it is a nested loop or not
+		String[] temp = null;
+		setSplittedContent(getNewContent()); //split the new content for manipulation
+		
+		for(int i = 0; i < getSplittedContent().length; i++){
+			temp = null;
+			occurence = 0;
+			//if a while loop has been found
+			if(getSplittedContent()[i].contains("while(true){")){
+				
+				for(int j = i; j<getSplittedContent().length; j++){
+					//if it is an inner loop add 1 occurence
+					if(getSplittedContent()[j].contains("while(true){")){
+						occurence++;
+					}
+					//if it goes outside the inner loop subtract 1
+					if(getSplittedContent()[j].contains("}")){
+						occurence--;
+					}
+					//if the condition is at the same level of the loop, manipulate
+					if(occurence == 0 && getSplittedContent()[j].contains(",{42733}->loop<-{42733}")){
+						temp = getSplittedContent()[j].split(",");
+
+						if(temp[0].contains("do")){
+							
+							getSplittedContent()[j] = "";
+							getSplittedContent()[i] = "do{";
+							
+							for(int k = i; k < getSplittedContent().length; k++){
+								if(getSplittedContent()[k].contains("while(true){")){
+									occurence++;
+								}
+								//if it goes outside the inner loop subtract 1
+								if(getSplittedContent()[k].contains("}")){
+									occurence--;
+								}
+								
+								if(occurence == -1 && getSplittedContent()[k].contains("}")){
+									getSplittedContent()[k] += "while" + temp[1].substring(2, temp[1].length() - 1) + ";";
+								}
+								
+							}
+							
+							
+						}else{
+							
+							getSplittedContent()[j] = "";
+							getSplittedContent()[i] = "while" + temp[0].substring(2);
+							
+						}
+					}
+					
+				}			
+			}
+		}
+		
+		//set the new edited content
+		setNewContent("");	
+		for(int i = 0; i < getSplittedContent().length; i++){
+			appendNewContent(getSplittedContent()[i]);
+		}
+		
+	}
+	
+	/**
 	 * Evaluates if else conditions
 	 * @param condition the parsed condition of the if-else
 	 * @param j the line number of the label of the if-else condition in the assembly file

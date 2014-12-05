@@ -23,6 +23,271 @@ public class Assembler {
 	}
 	
 	/**
+	 * Evaluates if else conditions
+	 * @param condition the parsed condition of the if-else
+	 * @param j the line number of the label of the if-else condition in the assembly file
+	 * @param labelName the label's name in the assembly file
+	 */
+	private void evaluateIfElse(String condition, int j, String labelName){
+	
+		boolean match = false;
+		int finalPosition = 0;
+		String ifContent = "";
+		String elseContent = "";
+		String firstPortionLabel = "";
+		String rangeLabel = "";
+		//checks if the label matches a label inside the loop, if none, it is a break.
+		for(int i=j + 1; i<getSplittedContent().length; i++ ){
+			if(getSplittedContent()[i].replaceAll("\\s+", "").contains(labelName + ":")){
+				match = true;
+				break;				
+			}
+		}
+		//if there is a match, it means it is an if-else
+		if(!match){
+			appendNewContent(condition + ",{42733}->loop<-{42733}");
+		}else{	
+			//find the rangeLabel of if else
+			
+			for(int k = j; k<getSplittedContent().length; k++){
+				if(getSplittedContent()[k].toLowerCase().matches(".*\\bjmp\\b.*")){
+					rangeLabel = getSplittedContent()[k].replaceAll("\\s+", "").substring(3) + ":";
+					break;
+				}else if(getSplittedContent()[k].replaceAll("\\s+", "").contains(labelName + ":")){
+					setRange(k);
+					break;
+				}
+			}
+			
+			if(rangeLabel != ""){
+				for(int k = j; k<getSplittedContent().length; k++){
+					if(getSplittedContent()[k].contains(rangeLabel)){
+						setRange(k);
+						break;
+					}
+				}
+			}
+				
+			firstPortionLabel = labelName; //label of the if
+			//gets the content of the if condition
+			for(int k = j; k<getSplittedContent().length; k++){
+				if(getSplittedContent()[k].replaceAll("\\s+", "").contains(firstPortionLabel + ":")){
+					if(k > finalPosition)
+						finalPosition = k; //remember the last position to prevent being evaluated again
+					break;
+				}
+				
+				ifContent += getSplittedContent()[k];
+				ifContent += "\n";
+				
+
+			}
+
+			if(finalPosition < getRange() && !getIsIf()){
+				appendNewContent("else ");	
+			}
+			setIsIf(false);
+			
+			appendNewContent(condition); //appends the condition of the if else
+			setSplittedContent(ifContent); //converts the code inside if 
+			setCurrentLine(0);
+			translateMain(); //translate the content
+			
+			setCurrentLine(finalPosition); //return the position
+			setSplittedContent(getContent());//sets the old content
+			appendNewContent("\n}");
+			
+			//else label
+			match = false;
+			for(int k = finalPosition + 1; k < getRange(); k++){
+				labelName = "";
+				if(getSplittedContent()[k].toLowerCase().matches(".*\\bje\\b.*")||getSplittedContent()[k].toLowerCase().matches(".*\\bjz\\b.*")){
+					labelName = getSplittedContent()[k].replaceAll("\\s+", "").substring(2);
+				}else if(getSplittedContent()[k].toLowerCase().matches(".*\\bjne\\b.*")||getSplittedContent()[k].toLowerCase().matches(".*\\bjnz\\b.*")){
+					labelName = getSplittedContent()[k].replaceAll("\\s+", "").substring(3);
+				}else if(getSplittedContent()[k].toLowerCase().matches(".*\\bjl\\b.*")){
+					labelName = getSplittedContent()[k].replaceAll("\\s+", "").substring(2);
+				}else if(getSplittedContent()[k].toLowerCase().matches(".*\\bjnge\\b.*")){
+					labelName = getSplittedContent()[k].replaceAll("\\s+", "").substring(4);
+				}else if(getSplittedContent()[k].toLowerCase().matches(".*\\bjge\\b.*")||getSplittedContent()[k].toLowerCase().matches(".*\\bjnl\\b.*")){
+					labelName = getSplittedContent()[k].replaceAll("\\s+", "").substring(3);
+				}else if(getSplittedContent()[k].toLowerCase().matches(".*\\bjle\\b.*")||getSplittedContent()[k].toLowerCase().matches(".*\\bjng\\b.*")){
+					labelName = getSplittedContent()[k].replaceAll("\\s+", "").substring(3);
+				}else if(getSplittedContent()[k].toLowerCase().matches(".*\\bjg\\b.*")){
+					labelName = getSplittedContent()[k].replaceAll("\\s+", "").substring(2);
+				}else if(getSplittedContent()[k].toLowerCase().matches(".*\\bjnle\\b.*")){
+					labelName = getSplittedContent()[k].replaceAll("\\s+", "").substring(4);
+				}
+				
+				if(!labelName.equals("")){
+					//checks if it is else or if-else
+					for(int l = finalPosition + 1; l < getSplittedContent().length; l++){
+						if(getSplittedContent()[l].replaceAll("\\s+", "").contains(labelName + ":") && l!=k){
+							match = true;
+							break;
+						}
+					}
+				}					
+			}
+
+			if(!match){
+				elseContent = "";
+				for(int k = finalPosition + 1; k <getRange(); k++){
+					elseContent += getSplittedContent()[k];
+					elseContent += "\n";
+				}
+				
+				// if else content is not empty
+				if(!elseContent.replaceAll("\\s+", "").equals("")){
+				
+					appendNewContent("else{"); //appends the condition of the if else
+					setSplittedContent(elseContent); //converts the code inside if 
+					setCurrentLine(0);
+					translateMain();
+					
+					setCurrentLine(getRange()); //return the position
+					setSplittedContent(getContent());//sets the old content
+					appendNewContent("\n}");
+				}
+				
+			}
+		
+			//if else block is over
+			if(finalPosition >= getRange()){	
+					setRange(0);
+					setIsIf(true);
+				
+			}
+		}		
+	}
+
+	/**
+	 * Translates while and determine if it is an if-else condition
+	 */
+	private void translateConditions(){
+		int i = getCurrentLine();
+		int labelPosition = 0;
+		int colonPosition = 0;
+		String labelName = "";
+		String newLoopContent = "";
+		String[] conditionValue = null;
+		String condition = "";
+		boolean matches = false;
+		
+		//checks if a label is encountered
+		if(getSplittedContent()[i].contains(":")){
+			//System.out.println(getSplittedContent()[0]);
+			colonPosition = getSplittedContent()[i].indexOf(':');
+			labelName = getSplittedContent()[i].substring(0, colonPosition);
+			labelName = labelName.replaceAll("\\s+", "");
+			
+			//if do and while
+			for(int j = i+1; j<getSplittedContent().length; j++){		
+				if(getSplittedContent()[j].contains(labelName)){
+					labelPosition = j+1;
+					break;
+				}				
+			}
+			
+			//if there is a label
+			if(labelPosition != 0){
+				for(int j = i+1; j<labelPosition; j++){		
+					newLoopContent += getSplittedContent()[j];
+					newLoopContent += "\n";					
+				}
+				setSplittedContent(newLoopContent); //convert the code inside the loop
+				appendNewContent("while(true){\n"); //mimic the behavior of assembly loop
+				setCurrentLine(0);
+				translateMain();
+				
+				setCurrentLine(labelPosition); //return the previous position
+				appendNewContent("\n}");
+				setSplittedContent(getContent()); //sets the old content
+			}
+					
+		}else if(getSplittedContent()[i].toLowerCase().contains("cmp")){ //if there is a condition, determine if a loop or if-else
+		
+			labelName = "";
+			condition = "";
+			conditionValue = getSplittedContent()[i].replaceAll("\\s+", "").substring(3).split(","); //gets the two values being compared
+			
+			//determine if the condition values are a variable or a digit, if it is a variable, add an index because it is declared as an array
+			if(!(Character.isDigit(conditionValue[0].charAt(0)))&&!(conditionValue[0].toLowerCase().equals("null"))){
+			   conditionValue[0] = conditionValue[0] + "[0]";
+			}
+			if(!(Character.isDigit(conditionValue[1].charAt(0)))&&!(conditionValue[1].toLowerCase().equals("null"))){
+			   conditionValue[1] = conditionValue[1] + "[0]";
+			}
+			
+			//remove comments and convert it to c++ comments
+			for(int j = i;j < getSplittedContent().length; j++){
+				int indexOfComment = 0;
+				String comments = "";
+				
+				if(getSplittedContent()[j].contains(";")){
+					indexOfComment = getSplittedContent()[j].indexOf(';');
+					comments = getSplittedContent()[j].substring(indexOfComment);
+					comments = comments.replaceAll(";", "");
+					getSplittedContent()[j] = getSplittedContent()[j].substring(0, indexOfComment);
+					appendNewContent("//" + comments);
+				}
+				
+				//gets the condition == > < >= <= !=
+				if(getSplittedContent()[j].toLowerCase().matches(".*\\bje\\b.*")||getSplittedContent()[j].toLowerCase().matches(".*\\bjz\\b.*")){
+					condition = "if(" + conditionValue[0] + " == " + conditionValue[1] + "){";
+					labelName = getSplittedContent()[j].replaceAll("\\s+", "").substring(2);
+					matches = true;
+				}else if(getSplittedContent()[j].toLowerCase().matches(".*\\bjne\\b.*")||getSplittedContent()[j].toLowerCase().matches(".*\\bjnz\\b.*")){
+					condition = "if(" + conditionValue[0] + " != " + conditionValue[1] + "){";
+					labelName = getSplittedContent()[j].replaceAll("\\s+", "").substring(3);
+					matches = true;
+				}else if(getSplittedContent()[j].toLowerCase().matches(".*\\bjl\\b.*")){
+					condition = "if(" + conditionValue[0] + " < " + conditionValue[1] + "){";
+					labelName = getSplittedContent()[j].replaceAll("\\s+", "").substring(2);
+					matches = true;
+				}else if(getSplittedContent()[j].toLowerCase().matches(".*\\bjnge\\b.*")){
+					condition = "if(" + conditionValue[0] + " < " + conditionValue[1] + "){";
+					labelName = getSplittedContent()[j].replaceAll("\\s+", "").substring(4);
+					matches = true;
+				}else if(getSplittedContent()[j].toLowerCase().matches(".*\\bjge\\b.*")||getSplittedContent()[j].toLowerCase().matches(".*\\bjnl\\b.*")){
+					condition = "if(" + conditionValue[0] + " >= " + conditionValue[1] + "){";
+					labelName = getSplittedContent()[j].replaceAll("\\s+", "").substring(3);
+					matches = true;
+				}else if(getSplittedContent()[j].toLowerCase().matches(".*\\bjle\\b.*")||getSplittedContent()[j].toLowerCase().matches(".*\\bjng\\b.*")){
+					condition = "if(" + conditionValue[0] + " <= " + conditionValue[1] + "){";
+					labelName = getSplittedContent()[j].replaceAll("\\s+", "").substring(3);
+					matches = true;
+				}else if(getSplittedContent()[j].toLowerCase().matches(".*\\bjg\\b.*")){
+					condition = "if(" + conditionValue[0] + " > " + conditionValue[1] + "){";
+					labelName = getSplittedContent()[j].replaceAll("\\s+", "").substring(2);
+					matches = true;
+				}else if(getSplittedContent()[j].toLowerCase().matches(".*\\bjnle\\b.*")){
+					condition = "if(" + conditionValue[0] + " > " + conditionValue[1] + "){";
+					labelName = getSplittedContent()[j].replaceAll("\\s+", "").substring(4);
+					matches = true;
+				}
+				
+				//if a condition is encountered, evaluate it
+				if(matches){
+									
+					if(j+1 == getSplittedContent().length){	
+						condition = "do," + condition;
+					}else{
+						condition = condition.substring(0, condition.indexOf('(')+1) + "!(" + condition.substring(condition.indexOf('(')+1, condition.indexOf(')') + 1) + ")" + condition.substring(condition.indexOf('{'));
+					}
+					evaluateIfElse(condition, j, labelName);
+					break;
+				}
+				//clear values
+				condition = "";
+				labelName = "";
+				matches = false;
+				
+			}
+		}
+	}
+	
+	/**
 	 * Translates the main body of the assembly file
 	 */
 	private void translateMain(){

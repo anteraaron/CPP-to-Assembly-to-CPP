@@ -4,6 +4,8 @@ package AssemblerDisassembler;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.FileNotFoundException;
+import java.io.IOException;
  
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -92,7 +94,7 @@ public class JFilePicker extends JPanel {
         		
         }else if(evt.getActionCommand().equals("Convert to Assembly")){
         	//System.out.println("to Assembly");
-        	
+        	Disassembler converter = new Disassembler();
         	try {
     			converter.convertCPPtoASM(textField.getText());
     			event = 0;

@@ -2,7 +2,7 @@ package AssemblerDisassembler;
 import java.io.*;
 
 public class Assembler {
-  private String filepath; //file path of the file
+	private String filepath; //file path of the file
 	private String content; //content of the file
 	private String newContent; //converted content
 	private int currentLine; //indicates the current line being manipulated
@@ -229,7 +229,7 @@ public class Assembler {
 			}
 		}		
 	}
-
+	
 	/**
 	 * Translates while and determine if it is an if-else condition
 	 */
@@ -279,14 +279,6 @@ public class Assembler {
 			labelName = "";
 			condition = "";
 			conditionValue = getSplittedContent()[i].replaceAll("\\s+", "").substring(3).split(","); //gets the two values being compared
-			
-			//determine if the condition values are a variable or a digit, if it is a variable, add an index because it is declared as an array
-			if(!(Character.isDigit(conditionValue[0].charAt(0)))&&!(conditionValue[0].toLowerCase().equals("null"))){
-			   conditionValue[0] = conditionValue[0] + "[0]";
-			}
-			if(!(Character.isDigit(conditionValue[1].charAt(0)))&&!(conditionValue[1].toLowerCase().equals("null"))){
-			   conditionValue[1] = conditionValue[1] + "[0]";
-			}
 			
 			//remove comments and convert it to c++ comments
 			for(int j = i;j < getSplittedContent().length; j++){
@@ -393,7 +385,7 @@ public class Assembler {
 				
 				
 				if(ah.equals("2")){
-					appendNewContent("std::cout << dl[0];\n");
+					appendNewContent("std::cout << dl;\n");
 				}else if (ah.equals("9")){
 					appendNewContent("std::cout << dx;\n");
 				}
@@ -411,74 +403,54 @@ public class Assembler {
 				if(!splittedOperands[0].equalsIgnoreCase("ds")&&!splittedOperands[1].equalsIgnoreCase("@data")){ //if not @data
 					
 					if(splittedOperands[1].toLowerCase().matches(".*\\d+h")){ //if it is a hex value, convert to decimal
-						splittedOperands[1] = String.valueOf((int)Integer.parseInt(splittedOperands[1].replaceAll("h", "").trim(), 16 ));
-						appendNewContent(splittedOperands[0] + "[0] = " + splittedOperands[1] + ";");
-						if(!(getSplittedContent()[i].replaceAll("\\s+",  "").equalsIgnoreCase("movah,09h")))
-							appendNewContent("updateRegisters();"); 
+						splittedOperands[1] = String.valueOf((int)Integer.parseInt(splittedOperands[1].replaceAll("h", "").trim(), 16 ));		
 					}else if(splittedOperands[1].toLowerCase().contains("offset")){ //if it is a string, use strcopy instead of =
-						splittedOperands[1] = splittedOperands[1].replaceAll("offset", "");
-						appendNewContent("strcpy("+splittedOperands[0]+","+splittedOperands[1]+");");
-					}else if(splittedOperands[1].toLowerCase().contains("\'")){ //if it is a character '[a-z]'
-						appendNewContent(splittedOperands[0] + "[0] = " + splittedOperands[1] + ";");
-						appendNewContent("updateRegisters();");
-					}else if(splittedOperands[1].toLowerCase().matches("\\d+")){ //if it is a number
-						appendNewContent(splittedOperands[0] + "[0] = " + splittedOperands[1] + ";");
-						appendNewContent("updateRegisters();");
-					}else{
-						appendNewContent("strcpy("+splittedOperands[0]+","+splittedOperands[1]+");");
+						splittedOperands[1] = splittedOperands[1].toLowerCase().replaceAll("offset", "");
 					}
+					appendNewContent(splittedOperands[0] + " = " + splittedOperands[1] + ";");
 				}
 			}else if(getSplittedContent()[i].toLowerCase().matches(".*\\blea\\b.*")){ //if lea is used in printing, use strcopy
 				temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
 				splittedOperands = temp.split(",");
-				appendNewContent("strcpy("+splittedOperands[0]+","+splittedOperands[1]+");");			
+				appendNewContent(splittedOperands[0] + " = " + splittedOperands[1] + ";");		
 			}else if(getSplittedContent()[i].toLowerCase().matches(".*\\bxor\\b.*")){ //if xor is used to clear registers
 				temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
 				splittedOperands = temp.split(",");
 				if(splittedOperands[0].toLowerCase().equals("ax")&&splittedOperands[1].toLowerCase().equals("ax")){
-					appendNewContent("ah[0] = 0;");
-					appendNewContent("al[0] = 0;");
+					appendNewContent("ah = 0;");
+					appendNewContent("al = 0;");
 				}else if(splittedOperands[0].toLowerCase().equals("bx")&&splittedOperands[1].toLowerCase().equals("bx")){
-					appendNewContent("bh[0] = 0;");
-					appendNewContent("bl[0] = 0;");
+					appendNewContent("bh = 0;");
+					appendNewContent("bl = 0;");
 				}else if(splittedOperands[0].toLowerCase().equals("cx")&&splittedOperands[1].toLowerCase().equals("cx")){
-					appendNewContent("ch[0] = 0;");
-					appendNewContent("cl[0] = 0;");
+					appendNewContent("ch = 0;");
+					appendNewContent("cl = 0;");
 				}else if(splittedOperands[0].toLowerCase().equals("dx")&&splittedOperands[1].toLowerCase().equals("dx")){
-					appendNewContent("dh[0] = 0;");
-					appendNewContent("dl[0] = 0;");
+					appendNewContent("dh = 0;");
+					appendNewContent("dl = 0;");
 				}	
-				appendNewContent("updateRegisters();");	
+
 			}else if(getSplittedContent()[i].toLowerCase().matches(".*\\badd\\b.*")||getSplittedContent()[i].toLowerCase().matches(".*\\binc\\b.*")){
 				//addition
 				if(getSplittedContent()[i].toLowerCase().matches(".*\\binc\\b.*")){
 					temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
-					appendNewContent(temp + "[0]++;");
+					appendNewContent(temp + "++;");
 				}else{
 					temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
 					splittedOperands = temp.split(",");
+					appendNewContent(splittedOperands[0] + "+=" +splittedOperands[1] + ";");
 					
-					if(!(Character.isDigit(splittedOperands[1].charAt(0))||(splittedOperands[1].replaceAll("\\s+", "").contains("'")&&splittedOperands.length < 4))){
-						appendNewContent(splittedOperands[0] + "[0]" + "+=" +splittedOperands[1] + "[0];");
-					}else{
-						appendNewContent(splittedOperands[0] + "[0]" + "+=" +splittedOperands[1] + ";");
-					}
 				}
 			}else if(getSplittedContent()[i].toLowerCase().matches(".*\\bsub\\b.*")||getSplittedContent()[i].toLowerCase().matches(".*\\bdec\\b.*")){
 				//subtraction
 				if(getSplittedContent()[i].toLowerCase().matches(".*\\bdec\\b.*")){
 					temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
-					appendNewContent(temp + "[0]--;");
+					appendNewContent(temp + "--;");
 				}else{
 					temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
 					splittedOperands = temp.split(",");
-					
-					if(!(Character.isDigit(splittedOperands[1].charAt(0))||(splittedOperands[1].replaceAll("\\s+", "").contains("'")&&splittedOperands.length < 4))){
-						appendNewContent(splittedOperands[0] + "[0]" + "-=" +splittedOperands[1] + "[0];");
-					}else{
-						appendNewContent(splittedOperands[0] + "[0]" + "-=" +splittedOperands[1] + ";");
-					}
-										
+					appendNewContent(splittedOperands[0] + "-=" +splittedOperands[1] + ";");
+							
 				}
 			}
 			//loop and conditions
@@ -493,7 +465,7 @@ public class Assembler {
 			}
 		}
 	}
-		
+	
 	/**
 	 * Translate assembly variables to C++
 	 */
@@ -538,10 +510,10 @@ public class Assembler {
 					variableName = splittedVariables[0].replaceAll("\\s+", "");
 					
 					//set data type
-					dataType = "char";
+					dataType = "std::string";
 					splittedVariables[1] = splittedVariables[1].replaceAll("\\$", "");//remove dollar signs					
 					if(splittedVariables[1].contains("\"")||(splittedVariables[1].contains("'")&&splittedVariables[1].replaceAll("\\s+","").length() > 3)){
-						variableName = variableName + "[" + splittedVariables[1].length() +"]"; //make every variables as an array
+						
 						
 						//parse decimal and hex value in declaration outside quotation marks
 						if(splittedVariables[1].contains(",")){
@@ -619,23 +591,16 @@ public class Assembler {
 						
 						splittedVariables[1] = "\"" + splittedVariables[1].trim() + "\"";
 					}else{
+						dataType = "char";
 						splittedVariables[1] = splittedVariables[1].replaceAll("\\s+", "");
-						
-						int occurances = 0;
-						for( int k=0; k<splittedVariables[1].length(); k++ ) {
-						    if( splittedVariables[1].charAt(k) == ',' ) {
-						        occurances++;
-						    } 
-						}		
-						occurances++;
 						oldVarName = variableName;
-						variableName = variableName + "[" + occurances + "]";
+		
 					}
 					
 					
 					
 					if(splittedVariables[1].contains("?")&&!splittedVariables[1].contains("\"")){//if declared as ?, set as 0 default value
-						value = "{0}";
+						value = "0";
 					}else{
 						ctr = 0;
 						for(int j=0; j<splittedVariables[1].length(); j++){
@@ -670,19 +635,10 @@ public class Assembler {
 							splittedVariables[1] = value;			
 						}
 						splittedVariables[1] = splittedVariables[1].replaceAll("\\s+", "");
-	
-						int occurances = 0;
-						for( int k=0; k<splittedVariables[1].length(); k++ ) {
-						    if( splittedVariables[1].charAt(k) == ',' ) {
-						        occurances++;
-						    } 
-						}				
-						occurances++;
-						oldVarName = oldVarName + "[" + occurances + "]";
 						variableName = oldVarName;
 					}
 											
-					value = "{" + splittedVariables[1] + "}";
+					value = splittedVariables[1];
 					}
 		
 					appendNewContent(dataType + " " + variableName + " = " + value + ";"); //converting finished.
@@ -715,30 +671,24 @@ public class Assembler {
 		//set declarations
 		appendNewContent("#include <iostream>");
 		appendNewContent("#include <cstdlib>");
-		appendNewContent("#include <cstring>\n");
+		appendNewContent("#include <cstring>");
+		appendNewContent("#include <string>\n");
 		//appendNewContent("using namespace std; \n");
-		appendNewContent("char ax[255] = {0};");
-		appendNewContent("char bx[255] = {0};");
-		appendNewContent("char cx[255] = {0};");
-		appendNewContent("char dx[255] = {0};");
-		appendNewContent("char al[2] = {0};");
-		appendNewContent("char bl[2] = {0};");
-		appendNewContent("char cl[2] = {0};");
-		appendNewContent("char dl[2] = {0};");
-		appendNewContent("char ah[2] = {0};");
-		appendNewContent("char bh[2] = {0};");
-		appendNewContent("char ch[2] = {0};");
-		appendNewContent("char dh[2] = {0};");
-		appendNewContent("char si[2] = {0};");
+		appendNewContent("std::string ax;");
+		appendNewContent("std::string bx;");
+		appendNewContent("std::string cx;");
+		appendNewContent("std::string dx;");
+		appendNewContent("char al;");
+		appendNewContent("char bl;");
+		appendNewContent("char cl;");
+		appendNewContent("char dl;");
+		appendNewContent("char ah;");
+		appendNewContent("char bh;");
+		appendNewContent("char ch;");
+		appendNewContent("char dh;");
+		appendNewContent("char si;");
 		translateVariables(); //converts assembly variables to C++
 		
-		
-		appendNewContent("\nvoid updateRegisters(){");
-		appendNewContent("ax[0] = al[0];\nax[1] = ah[0];");
-		appendNewContent("bx[0] = bl[0];\nbx[1] = bh[0];");
-		appendNewContent("cx[0] = cl[0];\ncx[1] = ch[0];");
-		appendNewContent("dx[0] = dl[0];\ndx[1] = dh[0];");
-		appendNewContent("}");
 		
 		
 		translateMain(); //translate the body of the assembly to C++
@@ -748,7 +698,6 @@ public class Assembler {
 		
 	}
 	
-	
 	/**
 	 * The Function which is called when converting to C++
 	 * Contains opening of file, writing to file and calling the process that converts the assembly file
@@ -757,7 +706,6 @@ public class Assembler {
 	 */
 	public int Assemble(String filepath){
 		setFilePath(filepath);
-		System.out.println(filepath);
 		String line = null;
 		String content = "";
 		try {
@@ -795,8 +743,8 @@ public class Assembler {
 		}
 
 	}
-		
-		
+	
+	
 	//Getter and Setters
 	private void setFilePath(String filepath){
 		this.filepath = filepath;

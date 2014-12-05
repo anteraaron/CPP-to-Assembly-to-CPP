@@ -21,6 +21,144 @@ public class Assembler {
 		this.splittedContent = null;
 		this.isIf = true;
 	}
+	
+	/**
+	 * Translates the main body of the assembly file
+	 */
+	private void translateMain(){
+		//removes comment and convert it to C++ code
+		int indexOfComment = 0;
+		String comments = "";
+		for(int i = getCurrentLine(); i<getSplittedContent().length; i++){	
+			setCurrentLine(i);
+			indexOfComment = 0;
+			if(getSplittedContent()[i].contains(";")){
+				indexOfComment = getSplittedContent()[i].indexOf(';');
+				comments = getSplittedContent()[i].substring(indexOfComment);
+				comments = comments.replaceAll(";", "");
+				getSplittedContent()[i] = getSplittedContent()[i].substring(0, indexOfComment);
+				appendNewContent("//" + comments);
+			}
+			
+			//evaluate the constant value in the assembly file
+			if(getSplittedContent()[i].trim().equalsIgnoreCase("main proc")){
+				appendNewContent("\nint main(){");
+			}else if(getSplittedContent()[i].trim().equalsIgnoreCase("main endp")){
+				appendNewContent("}");
+			}else if(getSplittedContent()[i].replaceAll("\\s+",  "").equalsIgnoreCase("int21h")){
+				
+				String ah = "";
+				
+				for(int j = 0; j < i; j++){
+					if(getSplittedContent()[j].replaceAll("\\s+",  "").equalsIgnoreCase("movah,09h")){
+						ah = "9";
+					}else if (getSplittedContent()[j].replaceAll("\\s+",  "").equalsIgnoreCase("movah,02h")){
+						ah = "2";
+					}
+				}
+				
+				
+				if(ah.equals("2")){
+					appendNewContent("std::cout << dl[0];\n");
+				}else if (ah.equals("9")){
+					appendNewContent("std::cout << dx;\n");
+				}
+				
+			}/*else if(getSplittedContent()[i].replaceAll("\\s+",  "").equalsIgnoreCase("movah,09h")&&getSplittedContent()[i+1].replaceAll("\\s+",  "").equalsIgnoreCase("int21h")){
+				appendNewContent("cout << dx;\n");
+			}*/
+			
+			String temp = "";
+			String[] splittedOperands = null;
+			//evaluate mov
+			if(getSplittedContent()[i].toLowerCase().matches(".*\\bmov\\b.*")&&!getSplittedContent()[i].toLowerCase().matches(".*\\b4c00h\\b.*")){
+				temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
+				splittedOperands = temp.split(",");
+				if(!splittedOperands[0].equalsIgnoreCase("ds")&&!splittedOperands[1].equalsIgnoreCase("@data")){ //if not @data
+					
+					if(splittedOperands[1].toLowerCase().matches(".*\\d+h")){ //if it is a hex value, convert to decimal
+						splittedOperands[1] = String.valueOf((int)Integer.parseInt(splittedOperands[1].replaceAll("h", "").trim(), 16 ));
+						appendNewContent(splittedOperands[0] + "[0] = " + splittedOperands[1] + ";");
+						if(!(getSplittedContent()[i].replaceAll("\\s+",  "").equalsIgnoreCase("movah,09h")))
+							appendNewContent("updateRegisters();"); 
+					}else if(splittedOperands[1].toLowerCase().contains("offset")){ //if it is a string, use strcopy instead of =
+						splittedOperands[1] = splittedOperands[1].replaceAll("offset", "");
+						appendNewContent("strcpy("+splittedOperands[0]+","+splittedOperands[1]+");");
+					}else if(splittedOperands[1].toLowerCase().contains("\'")){ //if it is a character '[a-z]'
+						appendNewContent(splittedOperands[0] + "[0] = " + splittedOperands[1] + ";");
+						appendNewContent("updateRegisters();");
+					}else if(splittedOperands[1].toLowerCase().matches("\\d+")){ //if it is a number
+						appendNewContent(splittedOperands[0] + "[0] = " + splittedOperands[1] + ";");
+						appendNewContent("updateRegisters();");
+					}else{
+						appendNewContent("strcpy("+splittedOperands[0]+","+splittedOperands[1]+");");
+					}
+				}
+			}else if(getSplittedContent()[i].toLowerCase().matches(".*\\blea\\b.*")){ //if lea is used in printing, use strcopy
+				temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
+				splittedOperands = temp.split(",");
+				appendNewContent("strcpy("+splittedOperands[0]+","+splittedOperands[1]+");");			
+			}else if(getSplittedContent()[i].toLowerCase().matches(".*\\bxor\\b.*")){ //if xor is used to clear registers
+				temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
+				splittedOperands = temp.split(",");
+				if(splittedOperands[0].toLowerCase().equals("ax")&&splittedOperands[1].toLowerCase().equals("ax")){
+					appendNewContent("ah[0] = 0;");
+					appendNewContent("al[0] = 0;");
+				}else if(splittedOperands[0].toLowerCase().equals("bx")&&splittedOperands[1].toLowerCase().equals("bx")){
+					appendNewContent("bh[0] = 0;");
+					appendNewContent("bl[0] = 0;");
+				}else if(splittedOperands[0].toLowerCase().equals("cx")&&splittedOperands[1].toLowerCase().equals("cx")){
+					appendNewContent("ch[0] = 0;");
+					appendNewContent("cl[0] = 0;");
+				}else if(splittedOperands[0].toLowerCase().equals("dx")&&splittedOperands[1].toLowerCase().equals("dx")){
+					appendNewContent("dh[0] = 0;");
+					appendNewContent("dl[0] = 0;");
+				}	
+				appendNewContent("updateRegisters();");	
+			}else if(getSplittedContent()[i].toLowerCase().matches(".*\\badd\\b.*")||getSplittedContent()[i].toLowerCase().matches(".*\\binc\\b.*")){
+				//addition
+				if(getSplittedContent()[i].toLowerCase().matches(".*\\binc\\b.*")){
+					temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
+					appendNewContent(temp + "[0]++;");
+				}else{
+					temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
+					splittedOperands = temp.split(",");
+					
+					if(!(Character.isDigit(splittedOperands[1].charAt(0))||(splittedOperands[1].replaceAll("\\s+", "").contains("'")&&splittedOperands.length < 4))){
+						appendNewContent(splittedOperands[0] + "[0]" + "+=" +splittedOperands[1] + "[0];");
+					}else{
+						appendNewContent(splittedOperands[0] + "[0]" + "+=" +splittedOperands[1] + ";");
+					}
+				}
+			}else if(getSplittedContent()[i].toLowerCase().matches(".*\\bsub\\b.*")||getSplittedContent()[i].toLowerCase().matches(".*\\bdec\\b.*")){
+				//subtraction
+				if(getSplittedContent()[i].toLowerCase().matches(".*\\bdec\\b.*")){
+					temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
+					appendNewContent(temp + "[0]--;");
+				}else{
+					temp = getSplittedContent()[i].replaceAll("\\s+", "").substring(3);
+					splittedOperands = temp.split(",");
+					
+					if(!(Character.isDigit(splittedOperands[1].charAt(0))||(splittedOperands[1].replaceAll("\\s+", "").contains("'")&&splittedOperands.length < 4))){
+						appendNewContent(splittedOperands[0] + "[0]" + "-=" +splittedOperands[1] + "[0];");
+					}else{
+						appendNewContent(splittedOperands[0] + "[0]" + "-=" +splittedOperands[1] + ";");
+					}
+										
+				}
+			}
+			//loop and conditions
+			if(getSplittedContent()[i].toLowerCase().matches(".*\\bcmp\\b.*")||getSplittedContent()[i].toLowerCase().contains(":")){
+				setCurrentLine(i);
+				translateConditions();
+				i = getCurrentLine();
+			}
+			//return 0 line
+			if(getSplittedContent()[i].replaceAll("\\s+",  "").equalsIgnoreCase("movax,4c00h")&&getSplittedContent()[i+1].replaceAll("\\s+",  "").equalsIgnoreCase("int21h")){
+				appendNewContent("return 0;");
+			}
+		}
+	}
 		
 	/**
 	 * Translate assembly variables to C++
@@ -231,6 +369,52 @@ public class Assembler {
 			}
 		}	
 	}
+	
+	
+	/**
+	 * Converts Assembly to C++.
+	 * Pre-Define variables and declarations part
+	 * @param content The content of the assembly file
+	 */
+	private void translate(String content){
+		
+		//set declarations
+		appendNewContent("#include <iostream>");
+		appendNewContent("#include <cstdlib>");
+		appendNewContent("#include <cstring>\n");
+		//appendNewContent("using namespace std; \n");
+		appendNewContent("char ax[255] = {0};");
+		appendNewContent("char bx[255] = {0};");
+		appendNewContent("char cx[255] = {0};");
+		appendNewContent("char dx[255] = {0};");
+		appendNewContent("char al[2] = {0};");
+		appendNewContent("char bl[2] = {0};");
+		appendNewContent("char cl[2] = {0};");
+		appendNewContent("char dl[2] = {0};");
+		appendNewContent("char ah[2] = {0};");
+		appendNewContent("char bh[2] = {0};");
+		appendNewContent("char ch[2] = {0};");
+		appendNewContent("char dh[2] = {0};");
+		appendNewContent("char si[2] = {0};");
+		translateVariables(); //converts assembly variables to C++
+		
+		
+		appendNewContent("\nvoid updateRegisters(){");
+		appendNewContent("ax[0] = al[0];\nax[1] = ah[0];");
+		appendNewContent("bx[0] = bl[0];\nbx[1] = bh[0];");
+		appendNewContent("cx[0] = cl[0];\ncx[1] = ch[0];");
+		appendNewContent("dx[0] = dl[0];\ndx[1] = dh[0];");
+		appendNewContent("}");
+		
+		
+		translateMain(); //translate the body of the assembly to C++
+		changeWhileConditions();
+		
+		
+		
+	}
+	
+	
 	/**
 	 * The Function which is called when converting to C++
 	 * Contains opening of file, writing to file and calling the process that converts the assembly file

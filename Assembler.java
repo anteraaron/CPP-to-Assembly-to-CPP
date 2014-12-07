@@ -698,56 +698,56 @@ public class Assembler {
 		changeWhileConditions();
 		
 		
-	}
-	
-	/**
-	 * The Function which is called when converting to C++
-	 * Contains opening of file, writing to file and calling the process that converts the assembly file
-	 * @param filepath
-	 * @return 
-	 */
-	public int Assemble(String filepath){
-		setFilePath(filepath);
-		String line = null;
-		String content = "";
-		try {
-			@SuppressWarnings("resource")
-			BufferedReader inputStream = new BufferedReader(new FileReader(getFilePath()));
-			//reads the file content and save its content.
-			while(true){
-				line = inputStream.readLine();
-				if(line == null){
-					break;
-				}
-				appendContent(line);
-			}
-			
-			translate(content); //calls the process that translates the assembly to c++
-			
-			//writing the translated code to .cpp file with the same file name
-			
-			File f = new File(filepath);
-			filepath = f.getName();
-			filepath = filepath.substring(0, filepath.length()-4);
-			PrintWriter writer = new PrintWriter(filepath + ".cpp", "UTF-8");
-			writer.println(getNewContent());
-			writer.close();
-			return 0;
-		} catch (FileNotFoundException e) {
-			System.out.println("File not Found");
-			return 1;
-		} catch(IOException e){
-			System.out.println("Error reading file!");
-			return 2;
-		} catch (Exception e){
-			System.out.println("Error");
-			e.printStackTrace();
-			return 3;
-		}
-
-	}
-	
-	
+	} 
+	 
+	/** 
+	 * The Function which is called when converting to C++ 
+	 * Contains opening of file, writing to file and calling the process that converts the assembly file 
+	 * @param filepath 
+	 * @return  
+	 */ 
+	public int Assemble(String filepath){ 
+		setFilePath(filepath); 
+		String line = null; 
+		String content = ""; 
+		try { 
+			@SuppressWarnings("resource") 
+			BufferedReader inputStream = new BufferedReader(new FileReader(getFilePath())); 
+			//reads the file content and save its content. 
+			while(true){ 
+				line = inputStream.readLine(); 
+				if(line == null){ 
+					break; 
+				} 
+				appendContent(line); 
+			} 
+			 
+			translate(content); //calls the process that translates the assembly to c++ 
+			 
+			//writing the translated code to .cpp file with the same file name 
+			 
+			File f = new File(filepath); 
+			filepath = f.getName(); 
+			filepath = filepath.substring(0, filepath.length()-4); 
+			PrintWriter writer = new PrintWriter(filepath + ".cpp", "UTF-8"); 
+			writer.println(getNewContent()); 
+			writer.close(); 
+			return 0; 
+		} catch (FileNotFoundException e) { 
+			System.out.println("File not Found"); 
+			return 1; 
+		} catch(IOException e){ 
+			System.out.println("Error reading file!"); 
+			return 2; 
+		} catch (Exception e){ 
+			System.out.println("Error"); 
+			e.printStackTrace(); 
+			return 3; 
+		} 
+ 
+	} 
+	 
+	 
 	//Getter and Setters
 	private void setFilePath(String filepath){
 		this.filepath = filepath;

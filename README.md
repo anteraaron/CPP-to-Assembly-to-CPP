@@ -1,8 +1,5 @@
 Our-Group-Name
-Members:
-Anter Aaron Custodio
-Marie Angelique Nonan
-Carl Viernes
+Members:Anter Aaron Custodio, Marie Angelique Nonan, Carl Viernes
 ==============
 MP 001 - Disassembler/Assembler
 How to use:

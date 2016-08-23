@@ -1,5 +1,4 @@
-Our-Group-Name
-Members:Anter Aaron Custodio, Marie Angelique Nonan, Carl Viernes
+Authors: Anter Aaron Custodio, Marie Angelique Nonan, Carl Viernes
 ==============
 Converts CPP language to Assembly and Assembly to CPP language. Programmed using Java programming language
 
